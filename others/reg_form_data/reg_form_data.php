@@ -13,4 +13,5 @@ $pay_methods = [
   "Кредитная карта",
 ];
 
-define('APPLICATION_FILEPATH', './others/claims/adf12321vxcv.json');
+define('APPLICATION_FILEPATH', '/home/mytest.fl8.ru/public_html/tasks/others/claims/adf12321vxcv.json');
+define('STATISTICS_FILEPATH', '/home/mytest.fl8.ru/public_html/tasks/others/claims/asdsad123.json');
