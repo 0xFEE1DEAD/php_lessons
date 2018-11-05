@@ -1,6 +1,6 @@
 <?php
 include './classes/reg_form_application.php';
-include './classes/reg_form_data.php';
+include './others/reg_form_data/reg_form_data.php';
 
 if (isset($_POST['deleted_files']) && is_array($_POST['deleted_files'])) {
 	Application::deleteApplicationInFile(APPLICATION_FILEPATH, $_POST['deleted_files']);

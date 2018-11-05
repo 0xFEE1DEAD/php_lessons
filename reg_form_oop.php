@@ -24,8 +24,8 @@
 	}
 
 	include './classes/reg_form_application.php';
-	include './classes/reg_form_messages.php';
-	include './classes/reg_form_data.php';
+	include './others/reg_form_data/reg_form_messages.php';
+	include './others/reg_form_data/reg_form_data.php';
 
 	$return_error_messages = [];
 	$application_saved = false;
@@ -56,7 +56,7 @@
 		
 		if (empty($return_error_messages)) {
 			$application -> writeToFile(APPLICATION_FILEPATH);
-			$claim_saved = true;
+			$application_saved = true;
 			$application = new Application();
 		}
 	} else {
