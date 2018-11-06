@@ -61,7 +61,7 @@ class Application {
 	}
 
 	function getPhoneNumber() {
-		return $this -> phone_number;
+		return preg_replace('/^(\\+7|8)\\s{0,1}(\\d{3})\\s{0,1}(\\d{3})\\-{0,1}(\\d{2})\\-{0,1}(\\d{2})$/u', '+7 ${2} ${3}-${4}-${5}', $this -> phone_number);
 	}
 
 	function getConferenceTheme() {
@@ -72,7 +72,7 @@ class Application {
 		return $this -> pay_method;
 	}
 
-	function gettMailing() {
+	function getMailing() {
 		return $this -> mailing;
 	}
   
@@ -80,8 +80,16 @@ class Application {
 		if ($this -> firstname === "") {
 			return 1; 
 		}
-		if (preg_match('/^[А-Я][а-яё]+$/u', $this -> firstname) === 0) {
+		if (preg_match('/(^[А-Я][а-яё]+$)/u', $this -> firstname) === 0) {
 			return 2;
+		}
+		$strlen = strlen($this -> firstname);
+		if ($strlen > 255) {			
+			return 4;
+		}
+		if ($strlen < 2) {
+			var_dump(count($this -> firstname));
+			return 5;
 		}
 		
 		return 0;
@@ -94,17 +102,31 @@ class Application {
 		if (preg_match('/(^[А-Я][а-яё]+$)|(^[А-Я][а-я]+\-[А-Я][а-яё]+$)/u', $this -> secondname) === 0) {
 			return 2;
 		}
+		$strlen = strlen($this -> firstname);
+		if ($strlen > 255) {
+			return 4;
+		}
+		if ($strlen < 2) {
+			return 5;
+		}
 
 		return 0;
 	}
   
 	function checkEmail() {
-		if ($this -> secondname === "") {
+		if ($this -> email === "") {
 			return 1; 
 		}
-		if (preg_match('/^[a-zA-Z\.\-_0-9]+@[a-zA-Z_]+?\.[a-zA-Z]{2,6}$/u', $this -> email) === 0) {
+		if (preg_match('/(^[a-zA-Z\.\-_0-9]+@[a-zA-Z_]+?\.[a-zA-Z]{2,6}$)/u', $this -> email) === 0) {
 			return 2;
 			
+		}
+		$strlen = strlen($this -> firstname);
+		if ($strlen > 255) {
+			return 4;
+		}
+		if ($strlen < 2) {
+			return 5;
 		}
 
 		return 0;
@@ -212,4 +234,93 @@ class Application {
 	private $pay_method;
 	private $mailing;
   
+}
+
+class ApplicationsDatabase {
+	public function __construct() {
+		$this -> dbo = new PDO('mysql:host=localhost;port=3306;dbname=mytest24;charset=utf8', 'mytest24', '', [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+	}
+	
+	public function getApplications() {
+		$query_str = 'SELECT
+					`applications_applications`.`id`,
+					`firstname`, 
+					`secondname`, 
+					`email`, 
+					`phone_number`, 
+					`mailing`,
+					`created_at`,
+					`applications_conference_themes`.`name` as `conference_theme`,
+					`applications_pay_methods`.`name` as `payment_method`
+					FROM `applications_applications`
+					LEFT JOIN `applications_conference_themes` ON `applications_applications`.`conference_theme_id` = `applications_conference_themes`.`id`
+					LEFT JOIN `applications_pay_methods` ON `applications_applications`.`payment_method_id` = `applications_pay_methods`.`id`;';
+		$tmp_arr = $this -> dbo -> query($query_str);
+
+		return $tmp_arr;
+	}
+	
+	public function addApplication(&$application) 
+	{
+		$query_str = 'SELECT `id` FROM `applications_conference_themes` WHERE name = :conference_theme';
+		$tbl = $this -> dbo -> prepare($query_str);
+		$tbl -> execute(['conference_theme' => $application -> getConferenceTheme()]);
+		$conference_theme_id = $tbl -> fetchAll(PDO::FETCH_COLUMN)[0];
+		
+		$query_str = 'SELECT `id` FROM `applications_pay_methods` WHERE name = :pay_method';
+		$tbl = $this -> dbo -> prepare($query_str);
+		$tbl -> execute(['pay_method' => $application -> getPayMethod()]);
+		$payment_method_id =  $tbl -> fetchAll(PDO::FETCH_COLUMN)[0];
+
+		$query_str = 'INSERT INTO `applications_applications`
+		(`firstname`,
+		`secondname`,
+		`email`,
+		`phone_number`,
+		`conference_theme_id`, 
+		`payment_method_id`, 
+		`mailing`, 
+		`created_at`) 
+		 VALUES 
+		(:firstname,
+		 :secondname,
+		 :email,
+		 :phone_number,
+		 :conference_theme_id,
+		 :payment_method_id,
+		 :mailing,
+		 :time_)';
+		 
+		$tbl = $this -> dbo -> prepare($query_str);
+		$param_array = [  
+						'firstname' => $application -> getFirstname(),
+						'secondname' => $application -> getSecondname(),
+						'email' => $application -> getEmail(),
+						'phone_number' => $application -> getPhoneNumber(),
+						'conference_theme_id' => (int)$conference_theme_id,
+						'payment_method_id' => (int)$payment_method_id,
+						'mailing' => $application -> getMailing(),
+						'time_' => time(),
+						];
+
+		$tbl -> execute($param_array);
+	}
+	
+	public function getConferenceThemes() {
+		return $this -> dbo -> query('SELECT `name` FROM `applications_conference_themes`') -> fetchAll(PDO::FETCH_COLUMN);
+	}
+	
+	public function getPaymentMethods() {
+		return $this -> dbo -> query('SELECT `name` FROM `applications_pay_methods`') -> fetchAll(PDO::FETCH_COLUMN);
+	}
+	
+	public function deleteApplications($applications_ids) {
+		$in_query = implode(',', array_fill(0, count($applications_ids), '?'));
+		$query_str = 'DELETE FROM `applications_applications` WHERE `id` IN (' . $in_query . ')';
+		$tbl = $this -> dbo -> prepare($query_str);
+		
+		$tbl -> execute($applications_ids);
+	}
+
+	private $dbo;
 }
